@@ -11,24 +11,23 @@ fi
 
 
 # Get glibc source
-if [ -d "$SRC/$1" ]; then
-    cd "$SRC/$1"
-    git pull --all
+if [ -d "$SRC/glibc-$1" ]; then
+    echo "Source glibc was dowloaded"
 else
-    git clone git://sourceware.org/git/glibc.git "$SRC/$1"
-    cd "$SRC/$1"
-    git pull --all
+    mkdir -p "$SRC"
+    cd "$SRC"
+    wget "https://ftp.gnu.org/gnu/glibc/glibc-$1.tar.xz"
+    tar -xf "glibc-$1.tar.xz"
+    rm "glibc-$1.tar.xz"
 fi
 
-# Checkout release
-git rev-parse --verify --quiet "remotes/origin/release/$1/master"
-if [[ $? != 0 ]]; then
-    echo "Error: Glib version does not seem to exists"
+cd -
+
+# Check glibc version
+if [ -d "$VERSION/$1" ]; then
+    echo "Glib version was built"
     exit 1
 fi
-
-git checkout "remotes/origin/release/$1/master"
-cd -
 
 # Build
 if [ $# == 3 ] && [ "$3" = "-disable-tcache" ]; then
@@ -39,13 +38,13 @@ else
     SUFFIX=""
 fi
 
-mkdir -p "$BUILD/$1"
-cd "$BUILD/$1" && rm -rf ./*
-../../"$SRC/$1"/configure --prefix=/usr "$TCACHE_OPT" CFLAGS="-g -g3 -ggdb -gdwarf-4 -Og -Wno-uninitialized" CXXFLAGS="-g -g3 -ggdb -gdwarf-4 -Og -Wno-uninitialized"
+mkdir -p "$BUILD"
+cd "$BUILD" && rm -rf ./*
+../"$SRC/glibc-$1"/configure --prefix=/usr "$TCACHE_OPT" CFLAGS="-g -g3 -ggdb -gdwarf-4 -Og -Wno-uninitialized" CXXFLAGS="-g -g3 -ggdb -gdwarf-4 -Og -Wno-uninitialized"
 make -j "$2" 
 cd -
 
 # Copy to version folder
 mkdir -p "$VERSION/$1"
-cp "$BUILD/$1/libc.so" "$VERSION/$1/libc-$SUFFIX.so"
-cp "$BUILD/$1/elf/ld.so" "$VERSION/$1/ld-$SUFFIX.so"
+cp "$BUILD/libc.so" "$VERSION/$1/libc.so.6"
+cp "$BUILD/elf/ld.so" "$VERSION/$1/ld-$1.so"
